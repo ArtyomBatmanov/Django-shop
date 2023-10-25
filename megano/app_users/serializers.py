@@ -1,26 +1,24 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User
 from .models import Avatar, Profile
 
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = 'username', 'password'
-
-
 class AvatarSerializer(serializers.ModelSerializer):
+    src = serializers.SerializerMethodField()
+
     class Meta:
         model = Avatar
-        fields = 'src', 'alt'
+        fields = ["src", "alt"]
+
+    def get_src(self, obj):
+        return obj.src.url
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-    avatar = AvatarSerializer(many=False, required=False)
+    avatar = AvatarSerializer()
 
     class Meta:
         model = Profile
-        fields = '__all__'
+        fields = ["fullName", "email", "phone", "avatar"]
 
 
 class PasswordChangeSerializer(serializers.Serializer):
