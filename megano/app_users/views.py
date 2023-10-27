@@ -22,7 +22,9 @@ class SignUpView(APIView):
 
         try:
             user = User.objects.create_user(username=username, password=password)
-            profile = Profile.objects.create(user=user, first_name=name)
+            user.first_name = name
+            user.save()
+            profile = Profile.objects.create(user=user)
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 login(request, user)
@@ -48,20 +50,6 @@ class SignInView(APIView):
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class AuthView(APIView):
-    def post(self, request):
-        data = json.loads(list(request.data.keys())[0])
-        username = data.get('username')
-        password = data.get('password')
-        user = authenticate(username=username, password=password)
-
-        if user is not None:
-            login(request, user)
-        else:
-            return Response('Invalid credentials', status=status.HTTP_401_UNAUTHORIZED)
-
-        return Response('Authentication successful', status=status.HTTP_200_OK)
-
 
 class UserLogoutView(LogoutView):
     next_page = reverse_lazy('app_users:sign-in')
@@ -85,17 +73,21 @@ class ProfileView(APIView):
 
 
 class AvatarUpdateView(APIView):
-    def post(self, request: Request):
-        new_avatar = request.data.get('avatar')
-        user = request.user.pk
-        profile = Profile.objects.get(user_id=user)
-        avatar, created = Avatar.objects.get_or_create(profile_id=profile.pk)
+    permission_classes = [permissions.IsAuthenticated]
 
-        if str(new_avatar).endswith(('.png', '.jpg', '.jpeg')):
-            avatar.image = new_avatar
-            avatar.save()
-        else:
+    def post(self, request: Request):
+        new_avatar = request.FILES["avatar"]
+        if new_avatar is None:
+            return Response('No avatar file provided', status=status.HTTP_400_BAD_REQUEST)
+        if not str(new_avatar).endswith(('.png', '.jpg', '.jpeg')):
             return Response('Wrong file format', status=status.HTTP_400_BAD_REQUEST)
+
+        profile = Profile.objects.get(user=request.user)
+        avatar, created = Avatar.objects.get_or_create(profile=profile)
+
+        avatar.image = new_avatar
+        avatar.save()
+
         return Response('Update successful', status=status.HTTP_200_OK)
 
 
