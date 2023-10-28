@@ -77,33 +77,62 @@ class AvatarUpdateView(APIView):
 
     def post(self, request: Request):
         new_avatar = request.FILES["avatar"]
-        if new_avatar is None:
-            return Response('No avatar file provided', status=status.HTTP_400_BAD_REQUEST)
-        if not str(new_avatar).endswith(('.png', '.jpg', '.jpeg')):
+        user = request.user.pk
+        profile = Profile.objects.get(user_id=user)
+        avatar, created = Avatar.objects.get_or_create(profile_id=profile.pk)
+
+        if str(new_avatar).endswith(('.png', '.jpg', '.jpeg')):
+            avatar.image = new_avatar
+            avatar.save()
+        else:
             return Response('Wrong file format', status=status.HTTP_400_BAD_REQUEST)
-
-        profile = Profile.objects.get(user=request.user)
-        avatar, created = Avatar.objects.get_or_create(profile=profile)
-
-        avatar.image = new_avatar
-        avatar.save()
-
         return Response('Update successful', status=status.HTTP_200_OK)
 
 
-class ChangePasswordView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+# class ChangePasswordView(APIView):
+#     permission_classes = [permissions.IsAuthenticated]
+#
+#     def post(self, request):
+#         user = request.user
+#         current_password = request.data.get('current_password')
+#         new_password = request.data.get('new_password')
+#
+#         if not current_password or not new_password:
+#             return Response({"message": "Both current and new passwords must be provided."},
+#                             status=status.HTTP_400_BAD_REQUEST)
+#
+#         if not user.check_password(current_password):
+#             return Response({"message": "Current password is not correct"}, status=status.HTTP_400_BAD_REQUEST)
+#
+#         user.set_password(new_password)
+#         user.save()
+#
+#         return Response({'message': 'Password changed successfully'})
 
-    def post(self, request):
-        user = request.user
-        current_password = request.data.get('current_password')
-        new_password = request.data.get('new_password')
 
-        if not user.check_password(current_password):
-            return Response({'error': 'Invalid current password'}, status=400)
+class PasswordUpdateView(GenericAPIView, UpdateModelMixin):
+    serializer_class = PasswordChangeSerializer
 
-        user.set_password(new_password)
-        user.save()
+    def get_object(self):
+        return self.request.user
 
-        return Response({'message': 'Password changed  successfully'})
+    def post(self, *args, **kwargs):
+        return self.update(self.request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid():
+            if not self.object.check_password(serializer.data.get("passwordCurrent")):
+                return Response({"passwordCurrent": ["Wrong password"]}, status=status.HTTP_400_BAD_REQUEST)
+
+            elif not serializer.data.get("password") == serializer.data.get("passwordReply"):
+                return Response({'password': ['Passwords must match']}, status=status.HTTP_400_BAD_REQUEST)
+
+            self.object.set_password(serializer.data.get('passwordReply'))
+            self.object.save()
+            return Response('Update successful', status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 # Create your views here.
