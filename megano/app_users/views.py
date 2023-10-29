@@ -79,7 +79,7 @@ class AvatarUpdateView(APIView):
         new_avatar = request.FILES["avatar"]
         user = request.user.pk
         profile = Profile.objects.get(user_id=user)
-        avatar, created = Avatar.objects.get_or_create(profile_id=profile.pk)
+        avatar, created = Avatar.objects.get_or_create(src=profile.pk)
 
         if str(new_avatar).endswith(('.png', '.jpg', '.jpeg')):
             avatar.image = new_avatar
