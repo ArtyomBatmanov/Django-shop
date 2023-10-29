@@ -28,9 +28,7 @@ class Profile(models.Model):
     phone = models.PositiveIntegerField(
         blank=True, null=True, unique=True, verbose_name="Номер телефона"
     )
-    balance = models.DecimalField(
-        decimal_places=2, max_digits=10, default=0, verbose_name="Баланс"
-    )
+    email = models.EmailField(max_length=128)
     avatar = models.ForeignKey(
         Avatar,
         on_delete=models.CASCADE,
