@@ -42,41 +42,75 @@ class ProductImage(models.Model):
     def __str__(self):
         return f"/{self.image}"
 
-# {
-#   "id": 123,
-#   "category": 55,
-#   "price": 500.67,
-#   "count": 12,
-#   "date": "Thu Feb 09 2023 21:39:52 GMT+0100 (Central European Standard Time)",
-#   "title": "video card",
-#   "description": "description of the product",
-#   "fullDescription": "full description of the product",
-#   "freeDelivery": true,
-#   "images": [
-#     {
-#       "src": "/3.png",
-#       "alt": "Image alt string"
-#     }
-#   ],
-#   "tags": [
-#     "string"
-#   ],
-#   "reviews": [
-#     {
-#       "author": "Annoying Orange",
-#       "email": "no-reply@mail.ru",
-#       "text": "rewrewrwerewrwerwerewrwerwer",
-#       "rate": 4,
-#       "date": "2023-05-05 12:12"
-#     }
-#   ],
-#   "specifications": [
-#     {
-#       "name": "Size",
-#       "value": "XL"
-#     }
-#   ],
-#   "rating": 4.6
-# }
 
+class Tag(models.Model):
+    name = models.CharField(max_length=128, null=False, blank=True)
+    product = models.ManyToManyField(Product, related_name="tags", verbose_name="product")
+
+    class Meta:
+        verbose_name = "Tag"
+        verbose_name_plural = "Tags"
+        ordering = ["pk", ]
+
+    def __str__(self):
+        return self.name
+
+
+class Review(models.Model):
+    author = models.CharField(max_length=128)
+    email = models.EmailField(max_length=256)
+    text = models.TextField()
+    rate = models.PositiveSmallIntegerField(blank=False, default=5)
+    date = models.DateTimeField(auto_now_add=True)
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="reviews", verbose_name="product")
+
+    class Meta:
+        verbose_name = "Review"
+        verbose_name_plural = "Reviews"
+        ordering = ["pk", ]
+
+    def __str__(self):
+        return f"{self.author}: {self.product.title}"
+
+
+class Sale(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='sales')
+    salePrice = models.DecimalField(max_digits=10, db_index=True, decimal_places=2, default=0)
+    dateFrom = models.DateField(default='')
+    dateTo = models.DateField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Sale'
+        verbose_name_plural = 'Sales'
+
+    def price(self):
+        """
+        Получение первоначальной цены продукта
+        :return: цена
+        """
+        return self.product.price
+
+    def title(self):
+        """
+        Получение названия продукта
+        :return: название продукта
+        """
+        return self.product.title
+
+    def href(self):
+        """
+        Получение ссылки на детальную страницу продукта
+        :return: ссылка
+        """
+        return f'/product/{self.product.pk}'
+
+class ProductSpecification(models.Model):
+
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="specifications")
+    name = models.CharField(max_length=256, default="")
+    value = models.CharField(max_length=256, default="")
+
+    class Meta:
+        verbose_name = "Product specification"
+        verbose_name_plural = "Product specifications"
 # Create your models here.
