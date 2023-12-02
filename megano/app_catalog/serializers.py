@@ -20,6 +20,11 @@ class CategorySerializer(serializers.ModelSerializer):
     image = CategoryIconSerializer(many=False, required=False)
     subcategories = SubCategorySerializer(many=True, required=False)
 
+    # def get_image(self, instance):
+
+    #     return {"src": f"/media/{instance.image.href}"}
+
     class Meta:
         model = Category
         fields = "__all__"
+

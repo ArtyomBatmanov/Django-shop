@@ -107,5 +107,3 @@ class CategoriesList(APIView):
         categories = Category.objects.filter(parent=None)
         serialized = CategorySerializer(categories, many=True)
         return Response(serialized.data)
-
-

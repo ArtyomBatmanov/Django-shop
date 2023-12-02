@@ -42,6 +42,9 @@ INSTALLED_APPS = [
     'app_users.apps.AppUsersConfig',
     'app_catalog.apps.AppCatalogConfig',
     'app_products.apps.AppProductsConfig',
+    'app_orders.apps.AppOrdersConfig',
+    'app_basket.apps.AppBasketConfig',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -52,6 +55,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'request_logging.middleware.LoggingMiddleware',
 ]
 
 ROOT_URLCONF = 'megano.urls'
@@ -116,15 +120,44 @@ USE_I18N = True
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
-
 STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'uploads'
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+REST_FRAMEWORKS = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.SessionAuthentication',
+
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny',
+        # 'rest_framework.permissions.IsAuthenticated',
+        # 'rest_framework.permissions.IsAdminUser',
+     ),
+    "DEFAULT_PAGINATION_CLASS": "rets_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',  # change debug level as appropiate
+            'propagate': False,
+        },
+    },
+}
+
+BASKET_SESSION_ID = 'basket'

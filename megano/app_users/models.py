@@ -2,38 +2,39 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
-class Avatar(models.Model):
-    """Модель для хранения аватара пользователя"""
+def avatar_image_directory_path(instanse: "Avatar", filename):
+    return f"avatars/images/{instanse.profile.pk}/{filename}"
 
-    src = models.ImageField(
-        upload_to="app_users/avatars/user_avatars/",
-        default="app_users/avatars/default.png",
-        verbose_name="Ссылка",
-    )
-    alt = models.CharField(max_length=128, verbose_name="Описание")
+
+class Avatar(models.Model):
+    profile = models.OneToOneField("Profile", verbose_name='avatar', on_delete=models.CASCADE)
+    image = models.FileField(upload_to=avatar_image_directory_path)
 
     class Meta:
-        verbose_name = "Аватар"
-        verbose_name_plural = "Аватары"
+        verbose_name = "Profile image"
+        verbose_name_plural = "Profile images"
+        ordering = ["pk", ]
 
+    def src(self):
+        return f"/media/{self.image}"
+
+    def alt(self):
+        return f"{self.profile.user.username}_avatar"
+
+    def __str__(self):
+        return f"{self.profile.user.username}_avatar"
 
 
 class Profile(models.Model):
-    """Модель профиля пользователя"""
-
-    user = models.OneToOneField(
-        User, on_delete=models.CASCADE, related_name='profile'
-    )
-    fullName = models.CharField(max_length=128, verbose_name="Полное имя")
-    phone = models.PositiveIntegerField(
-        blank=True, null=True, unique=True, verbose_name="Номер телефона"
-    )
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=False)
+    fullName = models.CharField(max_length=256, null=False, blank=True, default='')
     email = models.EmailField(max_length=128)
-    avatar = models.ForeignKey(
-        Avatar,
-        on_delete=models.CASCADE,
-        related_name="profile",
-        verbose_name="Аватар",
-        null=True,
-        blank=True,
-    )
+    phone = models.CharField(max_length=64)
+
+    class Meta:
+        verbose_name = "Profile"
+        verbose_name_plural = "Profiles"
+        ordering = ["pk", ]
+
+    def __str__(self):
+        return f"{self.user.username}_profile"

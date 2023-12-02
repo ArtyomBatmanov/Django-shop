@@ -7,15 +7,17 @@ def product_image_directory_path(instanse: "ProductImage", filename):
 
 
 class Product(models.Model):
-    title = models.CharField(max_length=128, blank=False, unique=True)
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
-    price = models.DecimalField(max_digits=8, default=0, decimal_places=2, blank=False)
-    count = models.IntegerField(default=0, blank=False)
-    date = models.DateTimeField(auto_now_add=True, blank=False)
-    description = models.CharField(max_length=256, blank=True)
-    fullDescription = models.CharField(max_length=1028, blank=False)
-    free_delivery = models.BooleanField(default=True, blank=False)
+    title = models.CharField(max_length=128, null=False, blank=False)
+    description = models.CharField(max_length=256, null=False, blank=True)
+    fullDescription = models.TextField(null=False, blank=True)
+    price = models.DecimalField(default=0, max_digits=8, decimal_places=2, null=False)
+    count = models.IntegerField(default=0, null=False)
+    date = models.DateTimeField(auto_now_add=True, null=False)
+    freeDelivery = models.BooleanField(default=True)
+    limited_edition = models.BooleanField(default=False)
+    rating = models.DecimalField(default=0, max_digits=3, decimal_places=2, null=False)
     active = models.BooleanField(default=False)
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='products')
 
     class Meta:
         verbose_name = "Product"
@@ -24,6 +26,16 @@ class Product(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class ProductSpecification(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="specifications")
+    name = models.CharField(max_length=256, default="")
+    value = models.CharField(max_length=256, default="")
+
+    class Meta:
+        verbose_name = "Product specification"
+        verbose_name_plural = "Product specifications"
 
 
 class ProductImage(models.Model):
@@ -104,13 +116,5 @@ class Sale(models.Model):
         """
         return f'/product/{self.product.pk}'
 
-class ProductSpecification(models.Model):
-
-    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="specifications")
-    name = models.CharField(max_length=256, default="")
-    value = models.CharField(max_length=256, default="")
-
-    class Meta:
-        verbose_name = "Product specification"
-        verbose_name_plural = "Product specifications"
-# Create your models here.
+    def __str__(self):
+        return self.product.title

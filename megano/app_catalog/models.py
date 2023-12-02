@@ -20,6 +20,10 @@ class Category(models.Model):
         ordering = "pk",
 
     def href(self):
+        """
+        Получение ссылки
+        :return: ссылка
+        """
         return f"/catalog/{self.pk}"
 
     def __str__(self):
@@ -43,4 +47,3 @@ class CategoryIcon(models.Model):
 
     def __str__(self):
         return f"icon of {self.category.title}"
-

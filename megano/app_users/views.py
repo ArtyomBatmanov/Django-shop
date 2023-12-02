@@ -1,11 +1,11 @@
-from rest_framework import status, permissions
+from rest_framework import status
 from django.urls import reverse_lazy
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
-from .serializers import ProfileSerializer, AvatarSerializer, PasswordChangeSerializer
+from .serializers import UserSerializer, ProfileSerializer, PasswordChangeSerializer
 from django.contrib.auth.views import LogoutView
 from .models import Profile, Avatar
 from rest_framework.generics import GenericAPIView
@@ -14,72 +14,82 @@ import json
 
 
 class SignUpView(APIView):
-    def post(self, request):
-        user_data = json.loads(request.body)
-        name = user_data.get("name")
-        username = user_data.get("username")
-        password = user_data.get("password")
+    def post(self, request: Request):
+        data = json.loads(list(request.data.keys())[0])
+        serializer = UserSerializer(data=data)
+        username = data.get('username')
 
-        try:
-            user = User.objects.create_user(username=username, password=password)
-            user.first_name = name
-            user.save()
-            profile = Profile.objects.create(user=user)
-            user = authenticate(request, username=username, password=password)
-            if user is not None:
+        if User.objects.filter(username=username).exists():
+            return Response({'error': 'User already exists'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if serializer.is_valid():
+            name = data.get('name')
+            username = serializer.validated_data.get('username')
+            password = serializer.validated_data.get('password')
+
+            try:
+                user = User.objects.create_user(username=username, password=password)
+                user.first_name = name
+                user.save()
+                Profile.objects.create(user=user, fullName=name)
+                user = authenticate(username=username, password=password)
                 login(request, user)
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-            return Response(status=status.HTTP_201_CREATED)
-        except Exception:
-            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'success': 'Registered successfully'}, status=status.HTTP_201_CREATED)
 
-
-class SignInView(APIView):
-
-    def post(self, request):
-        user_data = json.loads(request.body)
-        username = user_data.get("username")
-        password = user_data.get("password")
-
-        user = authenticate(request, username=username, password=password)
-
-        if user is not None:
-            login(request, user)
-            return Response(status=status.HTTP_201_CREATED)
-
-        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserLogoutView(LogoutView):
-    next_page = reverse_lazy('app_users:sign-in')
+    next_page = reverse_lazy('users:sign-in')
 
 
-class ProfileView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request):
-        profile = Profile.objects.get(user=request.user)
-        serializer = ProfileSerializer(profile)
-        return Response(serializer.data)
-
+class AuthView(APIView):
     def post(self, request):
-        profile = Profile.objects.get(user=request.user)
-        serializer = ProfileSerializer(profile, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        data = json.loads(list(request.data.keys())[0])
+        username = data.get('username')
+        password = data.get('password')
+        user = authenticate(username=username, password=password)
+
+        if user is not None:
+            login(request, user)
+        else:
+            return Response('Invalid credentials', status=status.HTTP_401_UNAUTHORIZED)
+
+        return Response('Authentication successful', status=status.HTTP_200_OK)
+
+
+class ProfileDetail(APIView):
+
+    def get(self, request: Request):
+        user = request.user.pk
+        profile = Profile.objects.get(user_id=user)
+        serialized = ProfileSerializer(profile, many=False)
+        return Response(serialized.data)
+
+    def post(self, request: Request):
+        data = request.data
+        print(data)
+        user = request.user.pk
+        profile = Profile.objects.get(user_id=user)
+
+        profile.fullName = data.get('fullName')
+        profile.phone = data.get('phone')
+        profile.email = data.get('email')
+        profile.save()
+
+        return Response('Update successful', status=status.HTTP_200_OK)
 
 
 class AvatarUpdateView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
     def post(self, request: Request):
-        new_avatar = request.FILES["avatar"]
+        new_avatar = request.data.get('avatar')
         user = request.user.pk
         profile = Profile.objects.get(user_id=user)
-        avatar, created = Avatar.objects.get_or_create(src=profile.pk)
+        avatar, created = Avatar.objects.get_or_create(profile_id=profile.pk)
 
         if str(new_avatar).endswith(('.png', '.jpg', '.jpeg')):
             avatar.image = new_avatar
@@ -87,27 +97,6 @@ class AvatarUpdateView(APIView):
         else:
             return Response('Wrong file format', status=status.HTTP_400_BAD_REQUEST)
         return Response('Update successful', status=status.HTTP_200_OK)
-
-
-# class ChangePasswordView(APIView):
-#     permission_classes = [permissions.IsAuthenticated]
-#
-#     def post(self, request):
-#         user = request.user
-#         current_password = request.data.get('current_password')
-#         new_password = request.data.get('new_password')
-#
-#         if not current_password or not new_password:
-#             return Response({"message": "Both current and new passwords must be provided."},
-#                             status=status.HTTP_400_BAD_REQUEST)
-#
-#         if not user.check_password(current_password):
-#             return Response({"message": "Current password is not correct"}, status=status.HTTP_400_BAD_REQUEST)
-#
-#         user.set_password(new_password)
-#         user.save()
-#
-#         return Response({'message': 'Password changed successfully'})
 
 
 class PasswordUpdateView(GenericAPIView, UpdateModelMixin):
@@ -132,7 +121,7 @@ class PasswordUpdateView(GenericAPIView, UpdateModelMixin):
 
             self.object.set_password(serializer.data.get('passwordReply'))
             self.object.save()
+
             return Response('Update successful', status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-# Create your views here.
