@@ -23,19 +23,17 @@ class SignUpView(APIView):
             return Response({'error': 'User already exists'}, status=status.HTTP_400_BAD_REQUEST)
 
         if serializer.is_valid():
-            name = data.get('name')
             username = serializer.validated_data.get('username')
             password = serializer.validated_data.get('password')
 
             try:
                 user = User.objects.create_user(username=username, password=password)
-                user.first_name = name
                 user.save()
-                Profile.objects.create(user=user, fullName=name)
+                Profile.objects.create(user=user, fullName='')
                 user = authenticate(username=username, password=password)
                 login(request, user)
-            except Exception as e:
-                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as error:
+                return Response({'error': str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
             return Response({'success': 'Registered successfully'}, status=status.HTTP_201_CREATED)
 
