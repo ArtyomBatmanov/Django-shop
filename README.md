@@ -6,7 +6,7 @@
  - Перейти в директорию diploma-frontend/dist. Установить полученный пакет в виртуальное окружение: pip install diploma-frontend-0.6.tar.gz. 
  - Создайте миграции командой python manage.py makemigrations
  - Затем выполните команду python manage.py migrate
- - Установите фикстуры в базу данных командой python loaddata fixtures/fixtures.json
+ - Установите фикстуры в базу данных командой python manage.py loaddata fixtures/fixtures.json
     Админ: 
         логин: admin
         пароль: admin
